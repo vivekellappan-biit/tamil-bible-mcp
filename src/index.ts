@@ -235,8 +235,9 @@ server.tool(
     query: z.string().min(1).describe("Search term in Tamil script"),
     limit: z.number().int().min(1).max(50).default(10).describe("Max results (default 10, max 50)"),
     book: z.number().int().min(1).max(MAX_BOOK).optional().describe("Restrict search to a specific book number"),
+    testament: z.enum(["OT", "NT"]).optional().describe("Restrict search to Old Testament (books 1-48) or New Testament (books 49+)"),
   },
-  async ({ query, limit, book }) => {
+  async ({ query, limit, book, testament }) => {
     let q = supabase
       .from("bible")
       .select("*")
@@ -245,12 +246,117 @@ server.tool(
       .order("field1", { ascending: true })
       .limit(limit);
 
-    if (book) q = q.like("field1", `${bookPrefix(book)}%`);
+    if (book) {
+      q = q.like("field1", `${bookPrefix(book)}%`);
+    } else if (testament === "OT") {
+      q = q.gte("field1", bookPrefix(1)).lte("field1", `${bookPrefix(48)}999999`);
+    } else if (testament === "NT") {
+      q = q.gte("field1", bookPrefix(49)).lte("field1", `${bookPrefix(MAX_BOOK)}999999`);
+    }
 
     const { data, error } = await q;
     if (error) return { content: [{ type: "text", text: "Search failed" }], isError: true };
     if (!data?.length) return { content: [{ type: "text", text: `No verses found for "${query}"` }] };
     return { content: [{ type: "text", text: JSON.stringify(data.map(formatVerseRow), null, 2) }] };
+  }
+);
+
+// 5b. get_verse_range
+server.tool(
+  "get_verse_range",
+  "Get a range of verses within a single chapter of the Tamil Bible",
+  {
+    book: z.number().int().min(1).max(MAX_BOOK).describe(`Book number (1–${MAX_BOOK})`),
+    chapter: z.number().int().min(1).max(999).describe("Chapter number"),
+    start_verse: z.number().int().min(1).max(999).describe("Start verse number (inclusive)"),
+    end_verse: z.number().int().min(1).max(999).describe("End verse number (inclusive)"),
+  },
+  async ({ book, chapter, start_verse, end_verse }) => {
+    if (end_verse < start_verse) {
+      return { content: [{ type: "text", text: "end_verse must be >= start_verse" }], isError: true };
+    }
+    const { data, error } = await supabase
+      .from("bible")
+      .select("*")
+      .gte("field1", bookIdToCode(book, chapter, start_verse))
+      .lte("field1", bookIdToCode(book, chapter, end_verse))
+      .eq("field3", "V")
+      .order("field1", { ascending: true });
+
+    const key = String(book).padStart(2, "0");
+    if (error || !data?.length) {
+      return {
+        content: [{ type: "text", text: `Verses not found: ${BOOKS[key]?.bookNameEnglish ?? `Book ${book}`} ${chapter}:${start_verse}-${end_verse}` }],
+        isError: true,
+      };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(data.map(formatVerseRow), null, 2) }] };
+  }
+);
+
+// 5c. get_random_verse
+server.tool(
+  "get_random_verse",
+  "Get a random verse from the Tamil Bible, optionally restricted to a specific book",
+  {
+    book: z.number().int().min(1).max(MAX_BOOK).optional().describe("Restrict to a specific book number"),
+  },
+  async ({ book }) => {
+    let countQ = supabase.from("bible").select("*", { count: "exact", head: true }).eq("field3", "V");
+    if (book) countQ = countQ.like("field1", `${bookPrefix(book)}%`);
+    const { count, error: countError } = await countQ;
+
+    if (countError || !count) {
+      return { content: [{ type: "text", text: "Could not fetch a random verse" }], isError: true };
+    }
+
+    const offset = Math.floor(Math.random() * count);
+    let q = supabase
+      .from("bible")
+      .select("*")
+      .eq("field3", "V")
+      .order("field1", { ascending: true })
+      .range(offset, offset);
+    if (book) q = q.like("field1", `${bookPrefix(book)}%`);
+
+    const { data, error } = await q;
+    if (error || !data?.length) {
+      return { content: [{ type: "text", text: "Could not fetch a random verse" }], isError: true };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(formatVerseRow(data[0]), null, 2) }] };
+  }
+);
+
+// 5d. find_book
+server.tool(
+  "find_book",
+  "Find a book of the Tamil Bible by (partial) English name, Tamil name, short name, or old name, returning its book number",
+  {
+    name: z.string().min(1).describe("Full or partial book name in English or Tamil"),
+  },
+  async ({ name }) => {
+    const needle = name.trim().toLowerCase();
+    const matches = rawBooks
+      .filter(
+        (b) =>
+          b.bookNameEnglish.toLowerCase().includes(needle) ||
+          b.bookNameTamil.toLowerCase().includes(needle) ||
+          b.bookFullnameTamil.toLowerCase().includes(needle) ||
+          b.bookshortName.toLowerCase().includes(needle) ||
+          b.bookOldName?.toLowerCase().includes(needle)
+      )
+      .map((b) => ({
+        number: parseInt(b.bookNo),
+        english: b.bookNameEnglish,
+        tamil: b.bookNameTamil,
+        short: b.bookshortName,
+        chapters: b.count,
+      }));
+
+    if (!matches.length) {
+      return { content: [{ type: "text", text: `No book found matching "${name}"` }], isError: true };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(matches, null, 2) }] };
   }
 );
 
