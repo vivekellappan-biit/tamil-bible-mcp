@@ -68,8 +68,22 @@ npm run build
 
 ### 3. Register with your MCP client
 
-**Claude Code** — add to `.mcp.json` in your project (already present in this repo, pointing at the local
-build):
+**Claude Code** — the fastest way, using the published npm package (no cloning required):
+
+```bash
+claude mcp add tamil-bible -s user \
+  -e SUPABASE_URL=https://your-project.supabase.co \
+  -e SUPABASE_SERVICE_KEY=your-service-role-key \
+  -- npx -y tamil-bible-mcp
+```
+
+`-s user` registers it globally for your user account, so it's available in every project, not just the
+one you run this from. Use `-s project` instead if you want it committed to a specific repo's `.mcp.json`
+for your team, or `-s local` to keep it private to just the current project. Verify it connected with
+`claude mcp list`.
+
+If you're working from a local clone instead (e.g. to modify the server), this repo's `.mcp.json` already
+points at the local build:
 
 ```json
 {
@@ -84,20 +98,7 @@ build):
 }
 ```
 
-**Claude Desktop** — add to `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "tamil-bible": {
-      "command": "node",
-      "args": ["/absolute/path/to/tamil-bible-mcp/dist/index.js"]
-    }
-  }
-}
-```
-
-Or, once published, run it via `npx` without cloning:
+**Claude Desktop** — add to `claude_desktop_config.json`, using `npx` (no cloning required):
 
 ```json
 {
@@ -109,6 +110,19 @@ Or, once published, run it via `npx` without cloning:
         "SUPABASE_URL": "https://your-project.supabase.co",
         "SUPABASE_SERVICE_KEY": "your-service-role-key"
       }
+    }
+  }
+}
+```
+
+Or, if you're running from a local clone:
+
+```json
+{
+  "mcpServers": {
+    "tamil-bible": {
+      "command": "node",
+      "args": ["/absolute/path/to/tamil-bible-mcp/dist/index.js"]
     }
   }
 }
