@@ -59,6 +59,12 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+// Escape Postgres LIKE/ILIKE wildcard metacharacters in user-supplied input
+// so they're matched literally rather than acting as pattern wildcards.
+function escapeLikePattern(str: string): string {
+  return str.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function bookIdToCode(book: number, chapter: number, verse: number): string {
   return (
@@ -179,16 +185,17 @@ server.tool(
       .from("bible")
       .select("*")
       .eq("field1", code)
-      .single();
+      .eq("field3", "V")
+      .limit(1);
 
-    if (error || !data) {
+    if (error || !data?.length) {
       const key = String(book).padStart(2, "0");
       return {
         content: [{ type: "text", text: `Verse not found: ${BOOKS[key]?.bookNameEnglish ?? `Book ${book}`} ${chapter}:${verse}` }],
         isError: true,
       };
     }
-    return { content: [{ type: "text", text: JSON.stringify(formatVerseRow(data), null, 2) }] };
+    return { content: [{ type: "text", text: JSON.stringify(formatVerseRow(data[0]), null, 2) }] };
   }
 );
 
@@ -206,6 +213,7 @@ server.tool(
       .from("bible")
       .select("*")
       .like("field1", `${prefix}%`)
+      .eq("field3", "V")
       .order("field1", { ascending: true });
 
     const key = String(book).padStart(2, "0");
@@ -232,7 +240,7 @@ server.tool(
     let q = supabase
       .from("bible")
       .select("*")
-      .ilike("field2", `%${query}%`)
+      .ilike("field2", `%${escapeLikePattern(query)}%`)
       .eq("field3", "V")
       .order("field1", { ascending: true })
       .limit(limit);
@@ -240,7 +248,7 @@ server.tool(
     if (book) q = q.like("field1", `${bookPrefix(book)}%`);
 
     const { data, error } = await q;
-    if (error) return { content: [{ type: "text", text: `Search error: ${error.message}` }], isError: true };
+    if (error) return { content: [{ type: "text", text: "Search failed" }], isError: true };
     if (!data?.length) return { content: [{ type: "text", text: `No verses found for "${query}"` }] };
     return { content: [{ type: "text", text: JSON.stringify(data.map(formatVerseRow), null, 2) }] };
   }
@@ -259,10 +267,10 @@ server.tool(
       .from("daily_verses")
       .select("*")
       .eq("date", target)
-      .single();
+      .limit(1);
 
-    if (error || !data) return { content: [{ type: "text", text: `No daily verse found for ${target}` }], isError: true };
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    if (error || !data?.length) return { content: [{ type: "text", text: `No daily verse found for ${target}` }], isError: true };
+    return { content: [{ type: "text", text: JSON.stringify(data[0], null, 2) }] };
   }
 );
 
@@ -299,10 +307,10 @@ server.tool(
       .from("daily_saints")
       .select("*")
       .eq("date", target)
-      .single();
+      .limit(1);
 
-    if (error || !data) return { content: [{ type: "text", text: `No saint found for ${target}` }], isError: true };
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    if (error || !data?.length) return { content: [{ type: "text", text: `No saint found for ${target}` }], isError: true };
+    return { content: [{ type: "text", text: JSON.stringify(data[0], null, 2) }] };
   }
 );
 
@@ -316,7 +324,7 @@ server.tool(
   },
   async ({ category, random }) => {
     let q = supabase.from("bible_promise_box").select("*");
-    if (category) q = q.ilike("category", category);
+    if (category) q = q.ilike("category", escapeLikePattern(category));
     const { data, error } = await q;
 
     if (error || !data?.length) {
@@ -353,10 +361,10 @@ server.tool(
       .from("daily_quiz")
       .select("*")
       .eq("date", target)
-      .single();
+      .limit(1);
 
-    if (error || !data) return { content: [{ type: "text", text: `No quiz found for ${target}` }], isError: true };
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    if (error || !data?.length) return { content: [{ type: "text", text: `No quiz found for ${target}` }], isError: true };
+    return { content: [{ type: "text", text: JSON.stringify(data[0], null, 2) }] };
   }
 );
 
