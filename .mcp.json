@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "tamil-bible": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["dist/index.js"],
+      "env": {}
+    }
+  }
+}

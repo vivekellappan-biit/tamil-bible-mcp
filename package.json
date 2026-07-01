@@ -1,0 +1,47 @@
+{
+  "name": "tamil-bible-mcp",
+  "version": "1.0.0",
+  "description": "MCP server exposing the Tamil Roman Catholic Bible and daily-devotional content (verses, chapters, search, daily readings, saint of the day, promise box, quiz) as tools for Claude and other MCP clients",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "tamil-bible-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc && cp src/books.json dist/books.json && chmod +x dist/index.js",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "bible",
+    "tamil",
+    "catholic",
+    "claude",
+    "supabase"
+  ],
+  "license": "MIT",
+  "author": "Vivek Ellappan",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YOUR_GITHUB_USERNAME/tamil-bible-mcp.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@supabase/supabase-js": "^2.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
