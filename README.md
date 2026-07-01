@@ -39,7 +39,7 @@ You need a [Supabase](https://supabase.com) project (the free tier is enough) wi
 expects. This repo includes everything needed to stand one up from scratch:
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/tamil-bible-mcp.git
+git clone https://github.com/vivekellappan-biit/tamil-bible-mcp.git
 cd tamil-bible-mcp
 npm install
 cp .env.example .env   # then fill in your Supabase project URL + service role key

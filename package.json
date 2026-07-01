@@ -34,7 +34,7 @@
   "author": "Vivek Ellappan",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR_GITHUB_USERNAME/tamil-bible-mcp.git"
+    "url": "git+https://github.com/vivekellappan-biit/tamil-bible-mcp.git"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
