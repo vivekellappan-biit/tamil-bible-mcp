@@ -1,6 +1,6 @@
 {
   "name": "tamil-bible-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server exposing the Tamil Roman Catholic Bible and daily-devotional content (verses, chapters, search, daily readings, saint of the day, promise box, quiz) as tools for Claude and other MCP clients",
   "type": "module",
   "main": "dist/index.js",
